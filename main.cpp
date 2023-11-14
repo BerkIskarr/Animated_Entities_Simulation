@@ -273,3 +273,227 @@ public:
         takenCoordinates.clear();
         
     }
+    void move(Map& map) {
+        for (auto& entity : getEntities()) {
+            if (entity->getType() == "Human") {
+                int current_X = entity->getCoordinates().first;
+                int current_Y = entity->getCoordinates().second;
+                
+                int new_X = current_X + 1;  // Move to the cell on the right
+                int new_Y = current_Y;
+                // If the new position is occupied or at the edge of the room, move to a random adjacent unoccupied cell
+                if (new_X >= map.width || map.map[current_Y][new_X] != '.') {
+                    // Generate random direction (up, down, left)
+                    int direction = rand() % 3;
+                    if (direction == 0) {  // Move up
+                        new_X = current_X;
+                        new_Y--;
+                    } else if (direction == 1) {  // Move down
+                        new_X = current_X;
+                        new_Y++;
+                    } else if (direction == 2) {  // Move left
+                        new_X = current_X;
+                        new_X--;
+                    }
+                }
+                
+                // Update entity coordinates if the new position is valid
+                if (new_X >= 0 && new_X < map.width &&  new_Y >= 0 &&  new_Y < map.height && map.map[ new_Y][new_X] == '.' ) {
+                    // Check if the new position is not occupied by another entity
+                    bool validMove = true;
+                    for (const auto& otherEntity : getEntities()) {
+                        if (&otherEntity != &entity && otherEntity->getCoordinates() == make_pair(new_X,  new_Y)) {
+                            validMove = false;
+                            break;
+                        }
+                    }
+                    
+                    if (validMove) {
+                        // Reduce health by one since the human is moving
+                        entity->setHealth(entity->getHealth() - 1);
+                        
+                        // Update map locations
+                        map.new_location(current_X, current_Y, '.', entities);
+                        map.new_location(new_X,  new_Y, entity->getSymbol(), entities);
+                        
+                        // Update entity coordinates
+                        entity->setCoordinates(make_pair(new_X,  new_Y));
+                    }
+                }
+            }
+            
+            if (entity->getType() == "Dragon") {
+                int current_X = entity->getCoordinates().first;
+                int current_Y = entity->getCoordinates().second;
+                
+                vector<pair<int, int>> possibleMoves;
+                
+                // Check the cells adjacent to the current position
+                if (current_X - 1 >= 0 && map.map[current_Y][current_X - 1] == '.') {
+                    possibleMoves.push_back(make_pair(current_X - 1, current_Y)); // Move left
+                }
+                if (current_X + 1 < map.width && map.map[current_Y][current_X + 1] == '.') {
+                    possibleMoves.push_back(make_pair(current_X + 1, current_Y)); // Move right
+                }
+                if (current_Y - 1 >= 0 && map.map[current_Y - 1][current_X] == '.') {
+                    possibleMoves.push_back(make_pair(current_X, current_Y - 1)); // Move up
+                }
+                if (current_Y + 1 < map.height && map.map[current_Y + 1][current_X] == '.') {
+                    possibleMoves.push_back(make_pair(current_X, current_Y + 1)); // Move down
+                }
+                
+                if (!possibleMoves.empty()) {
+                    // Select a random move from the possibleMoves vector
+                    int randomIndex = rand() % possibleMoves.size();
+                    pair<int, int> newCoordinates = possibleMoves[randomIndex];
+                    
+                    // Update entity coordinates
+                    entity->setCoordinates(newCoordinates);
+                    
+                    // Update entity health
+                    entity->setHealth(entity->getHealth() - rand() % 6);
+                    
+                    // Update map with the new position
+                    map.new_location(current_X, current_Y, '.', entities);
+                    map.new_location(newCoordinates.first, newCoordinates.second, entity->getSymbol(), entities);
+                }
+            }
+            
+            if (entity->getType() == "Monster") {
+                int current_X = entity->getCoordinates().first;
+                int current_Y = entity->getCoordinates().second;
+                int strength = entity->getStrength();
+                
+                int new_X = current_X;
+                int new_Y = current_Y;
+                
+                vector<int> direction_store;
+                bool move_valid=false;
+                
+                // Generate random direction (up, down, left, right)
+                while(move_valid== false){
+                    int direction = rand() % 4;
+                    
+                    if (direction == 0) {  // Move up
+                        if (new_X >= 0 && new_X < map.width &&  current_Y - strength >= 0 && current_Y - strength  < map.height && map.map[ current_Y - strength][new_X] == '.' ){
+                            new_Y = current_Y - strength;
+                            move_valid = true;
+                            direction_store.push_back(direction);
+                        }
+                    } else if (direction == 1) {  // Move down
+                        if (new_X >= 0 && new_X < map.width &&  current_Y + strength >= 0 && current_Y + strength  < map.height && map.map[ current_Y + strength][new_X] == '.' ){
+                            new_Y = current_Y + strength;
+                            move_valid = true;
+                            direction_store.push_back(direction);
+                        }
+                    } else if (direction == 2) {  // Move left
+                        if (current_X - strength >= 0 && current_X - strength < map.width &&  new_Y >= 0 &&  new_Y < map.height && map.map[ new_Y][current_X - strength] == '.' ) {
+                            new_X = current_X - strength;
+                            move_valid = true;
+                            direction_store.push_back(direction);
+                        }
+                    } else if (direction == 3) {  // Move right
+                        if (current_X + strength >= 0 && current_X + strength < map.width &&  new_Y >= 0 &&  new_Y < map.height && map.map[ new_Y][current_X + strength] == '.' ) {
+                            new_X = current_X + strength;
+                            move_valid = true;
+                            direction_store.push_back(direction);
+                        }
+                    }
+                    else if(count(direction_store.begin(), direction_store.end(), 1)>=1 && count(direction_store.begin(), direction_store.end(), 2)>=1 && count(direction_store.begin(), direction_store.end(), 3)>=1 && count(direction_store.begin(), direction_store.end(), 4)>=1){
+                        break;
+                    }
+                }
+                
+                if (new_X < 0 || new_X >= map.width || new_Y < 0 || new_Y >= map.height) {
+                    // Move to a random adjacent unoccupied cell
+                    vector<pair<int, int>> adjacentCells;
+                    if (current_X - 1 >= 0 && map.map[current_Y][current_X - 1] == '.') {
+                        adjacentCells.emplace_back(current_X - 1, current_Y);  // Move left
+                    }
+                    if (current_X + 1 < map.width && map.map[current_Y][current_X + 1] == '.') {
+                        adjacentCells.emplace_back(current_X + 1, current_Y);  // Move right
+                    }
+                    if (current_Y - 1 >= 0 && map.map[current_Y - 1][current_X] == '.') {
+                        adjacentCells.emplace_back(current_X, current_Y - 1);  // Move up
+                    }
+                    if (current_Y + 1 < map.height && map.map[current_Y + 1][current_X] == '.') {
+                        adjacentCells.emplace_back(current_X, current_Y + 1);  // Move down
+                    }
+                    
+                    if (!adjacentCells.empty()) {
+                        // Select a random move from the adjacentCells vector
+                        int randomIndex = rand() % adjacentCells.size();
+                        pair<int, int> randomCell = adjacentCells[randomIndex];
+                        new_X = randomCell.first;
+                        new_Y = randomCell.second;
+                    }
+                }
+                
+                // Reduce health by strength since the monster is moving
+                entity->setHealth(entity->getHealth() - strength);
+                
+                // Update entity coordinates
+                entity->setCoordinates(make_pair(new_X, new_Y));
+                
+                // Update map with the new position
+                map.new_location(current_X, current_Y, '.', entities);
+                map.new_location(new_X, new_Y, entity->getSymbol(), entities);
+            }
+        }
+    }
+};
+
+void creation(){
+        Room room;
+        int choice;
+        
+        
+    room.addEntity(room.entities);
+        Map map(10, 10, room.entities);
+
+
+        
+        map.display();
+        while (true) {
+            cout << "\n1. Display Room\n2. Move all the animated entities\n3. Display the entity state by coordinates\n4. Reset the room\n5. Finish" << endl;
+            cin >> choice;
+            
+            if (choice == 1) {
+                map.display();
+            }
+            
+            else if (choice == 2) {
+ 
+                room.move(map);
+                map.display();
+            }
+            else if (choice == 3) {
+                int x, y;
+                cout << "Enter the coordinates (x y): ";
+                cin >> x >> y;
+                pair<int, int> coordinates(x, y);
+                
+                string info = room.display_info(coordinates);
+                
+                cout << info;
+            } else if (choice == 4) {
+                // Reset the room
+                room.reset();
+                creation();
+            }
+            else if (choice == 5) {
+                break; // Exit the program
+                
+            } else
+            {
+                cout << "INVALID" << endl;
+            }
+        }
+    }
+
+int main() {
+    srand(static_cast<unsigned int>(time(NULL)));
+    creation();
+    return 0;
+}
+
